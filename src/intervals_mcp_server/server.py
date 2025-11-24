@@ -1106,9 +1106,15 @@ async def parse_triathlon_workout_to_readable_format(
         
         # Description
         description = workout_data.get('description', 'No description available')
+        # Clean up description text - remove markdown-breaking patterns
+        cleaned_description = description.strip()
+        cleaned_description = cleaned_description.replace('`- - - -', '----')
+        cleaned_description = cleaned_description.replace('- - - -', '----')
+        cleaned_description = cleaned_description.replace('`', '')  # Remove backticks that could break formatting
+        
         result.append("Description:")
         result.append("```")
-        result.append(description.strip())
+        result.append(cleaned_description)
         result.append("```")
         result.append("")
         
