@@ -718,36 +718,98 @@ async def get_triathlon_workout_files(
         if sub_category:
             sub_category_lower = sub_category.lower()
 
-            # Define sub-category mapping based on file naming patterns
-            subcategory_patterns = {
-                "aerobic": ["CAe", "CAP"],  # Aerobic Intervals, Aerobic Progression
-                "anaerobic": ["CAI", "CAn"],  # Anaerobic Intervals
-                "accelerations": ["CA1", "CA2", "CA3", "CA4", "CA5", "CA6", "CA7", "CA8", "CA9"],
-                "cruise": ["CCI"],  # Cruise Intervals
-                "critical_power": ["CCP"],  # Critical Power
-                "depletion": ["CD"],  # Depletion
-                "descending": ["CDI"],  # Descending Intervals
-                "foundation": ["CF"],  # Foundation
-                "fast_finish": ["CFA", "CFF"],  # Fast Finish
-                "force": ["CFo"],  # Force Intervals
-                "mixed": ["CIM", "CMI"],  # Mixed Intervals
-                "sprint": ["CIR"],  # Sprint Intervals
-                "progression": ["CPI"],  # Progression Intervals
-                "power_repetitions": ["CPR"],  # Power Repetitions
-                "recovery": ["CRe"],  # Recovery
-                "speed_play": ["CSP"],  # Speed Play
-                "speed_repetitions": ["CSR"],  # Speed Repetitions
-                "steady_state": ["CSS"],  # Steady State
-                "tempo": ["CT"],  # Tempo
-                "threshold": ["CTR"],  # Threshold
-                "time_trial": ["CTT"],  # Time Trial
-                "variable_intensity": ["CVI"],  # Variable Intensity
-                "vo2max": ["CVO2M"],  # VO2 Max
-                "endurance": ["EC"],  # Endurance
-                "easy": ["EZC"],  # Easy
-                "lactate": ["LIC"],  # Lactate Intervals
-                "over_under": ["OUC"],  # Over Under Intervals
+            # Define sport-specific sub-category mappings based on actual file naming patterns
+            sport_subcategory_patterns = {
+                "Bike": {
+                    "aerobic": ["CAe", "CAP"],  # Aerobic Intervals, Aerobic Progression
+                    "anaerobic": ["CAI", "CAn"],  # Anaerobic Intervals
+                    "accelerations": ["CA1", "CA2", "CA3", "CA4", "CA5", "CA6", "CA7", "CA8", "CA9"],
+                    "cruise": ["CCI"],  # Cruise Intervals
+                    "critical_power": ["CCP"],  # Critical Power
+                    "depletion": ["CD"],  # Depletion
+                    "descending": ["CDI"],  # Descending Intervals
+                    "foundation": ["CF"],  # Foundation
+                    "fast_finish": ["CFA", "CFF"],  # Fast Finish
+                    "force": ["CFo"],  # Force Intervals
+                    "mixed": ["CIM", "CMI"],  # Mixed Intervals
+                    "sprint": ["CIR"],  # Sprint Intervals
+                    "progression": ["CPI"],  # Progression Intervals
+                    "power_repetitions": ["CPR"],  # Power Repetitions
+                    "recovery": ["CRe"],  # Recovery
+                    "speed_play": ["CSP"],  # Speed Play
+                    "speed_repetitions": ["CSR"],  # Speed Repetitions
+                    "steady_state": ["CSS"],  # Steady State
+                    "tempo": ["CT"],  # Tempo
+                    "threshold": ["CTR"],  # Threshold
+                    "time_trial": ["CTT"],  # Time Trial
+                    "variable_intensity": ["CVI"],  # Variable Intensity
+                    "vo2max": ["CVO2M"],  # VO2 Max
+                    "endurance": ["EC"],  # Endurance
+                    "easy": ["EZC"],  # Easy
+                    "lactate": ["LIC"],  # Lactate Intervals
+                    "over_under": ["OUC"],  # Over Under Intervals
+                },
+                "Run": {
+                    "aerobic": ["RAe"],  # Aerobic Intervals
+                    "anaerobic": ["RAI", "RAn"],  # Anaerobic Intervals
+                    "accelerations": ["RA"],  # Accelerations (RA0-RA9)
+                    "cruise": ["RCI"],  # Cruise Intervals
+                    "critical_velocity": ["RCV"],  # Critical Velocity
+                    "depletion": ["RD"],  # Depletion (RD0-RD6)
+                    "descending": ["RDI"],  # Descending Intervals
+                    "foundation": ["RF"],  # Foundation
+                    "fast_finish": ["RFF"],  # Fast Finish
+                    "fartlek": ["RFR"],  # Fartlek (Run Fast Repetitions)
+                    "half_marathon": ["RHM"],  # Half Marathon
+                    "heart_rate": ["RHR"],  # Heart Rate Training
+                    "long": ["RL"],  # Long Runs
+                    "long_speedplay": ["RLS"],  # Long Speed Play
+                    "mixed": ["RMI"],  # Mixed Intervals
+                    "marathon_pace": ["RMP"],  # Marathon Pace
+                    "progression": ["RP"],  # Progression
+                    "progression_fartlek": ["RPF"],  # Progression Fartlek
+                    "progression_intervals": ["RPI"],  # Progression Intervals
+                    "recovery": ["RRe"],  # Recovery
+                    "short_intervals": ["RSI"],  # Short Intervals
+                    "speed_play": ["RSP"],  # Speed Play
+                    "steady_state": ["RSS"],  # Steady State
+                    "tempo": ["RT"],  # Tempo
+                    "time_trial": ["RTT"],  # Time Trial
+                    "variable_intensity": ["RVI"],  # Variable Intensity
+                    "vo2max": ["RVO2M"],  # VO2 Max
+                    "cross_training": ["RXT"],  # Cross Training
+                    "5k": ["R5K"],  # 5K Training
+                    "10k": ["R10K"],  # 10K Training
+                    "easy": ["ER"],  # Easy Runs
+                    "easy_fast_finish": ["ERFF"],  # Easy with Fast Finish
+                    "long_finish": ["LFR"],  # Long Finish Runs
+                    "long_intervals": ["LIR"],  # Long Intervals
+                    "outdoor": ["OUR"],  # Outdoor Runs
+                    "warmup": ["WR"],  # Warmup Runs
+                },
+                "Swim": {
+                    "aerobic": ["SAe"],  # Aerobic Swimming
+                    "broken_swims": ["SBB"],  # Broken Base Builds
+                    "cruise": ["SCI"],  # Cruise Intervals
+                    "critical_pace": ["SCP"],  # Critical Pace
+                    "endurance": ["SE"],  # Endurance
+                    "easy_endurance": ["SEE"],  # Easy Endurance
+                    "endurance_recovery": ["SER"],  # Endurance Recovery
+                    "foundation": ["SF"],  # Foundation
+                    "short_intervals": ["SIS"],  # Short Intervals
+                    "lactate": ["SLI"],  # Lactate Intervals
+                    "mixed": ["SMI"],  # Mixed Intervals
+                    "recovery": ["SRe"],  # Recovery
+                    "short_sprint": ["SSI"],  # Short Sprint Intervals
+                    "speed_play": ["SSP"],  # Speed Play
+                    "tempo": ["ST"],  # Tempo
+                    "threshold_intervals": ["STI"],  # Threshold Intervals
+                    "time_trial": ["STT"],  # Time Trial
+                }
             }
+
+            # Get sub-category patterns for the specific sport
+            subcategory_patterns = sport_subcategory_patterns.get(category, {})
 
             # Find matching patterns for the sub-category
             matching_patterns = []
