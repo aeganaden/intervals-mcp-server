@@ -886,6 +886,61 @@ async def get_triathlon_workout_files(
 
 
 @mcp.tool()
+async def get_triathlon_workout_file_content(
+    category: str,
+    metric: str = "HR",
+    filename: str = "",
+) -> str:
+    """Get the full JSON content of a specific triathlon workout file.
+
+    Args:
+        category: The workout category (e.g., "Bike", "Run", "Swim")
+        metric: The workout metric type - "HR", "Power", "Pace", or "Meters" (defaults to "HR")
+        filename: The exact filename of the workout file to retrieve (e.g., "SRe1_Recovery_.json")
+    """
+    import os
+    import json
+
+    # Validate inputs
+    valid_metrics = ["HR", "Power", "Pace", "Meters"]
+    if metric not in valid_metrics:
+        return f"Error: Invalid metric '{metric}'. Valid options are: {', '.join(valid_metrics)}"
+
+    valid_categories = ["Bike", "Run", "Swim"]
+    if category not in valid_categories:
+        return f"Error: Invalid category '{category}'. Valid options are: {', '.join(valid_categories)}"
+
+    if not filename:
+        return "Error: filename parameter is required"
+
+    if not filename.endswith('.json'):
+        filename += '.json'
+
+    # Construct directory path
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    workout_dir = os.path.join(base_dir, "triathlon_workout_files", f"80_20_{category}_{metric}_80_20_Endurance_")
+
+    if not os.path.exists(workout_dir):
+        return f"Error: Workout directory not found for {category} with {metric} metric."
+
+    # Construct full file path
+    file_path = os.path.join(workout_dir, filename)
+
+    if not os.path.exists(file_path):
+        return f"Error: Workout file '{filename}' not found in {category} ({metric}) directory."
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            workout_data = json.load(f)
+
+        # Return the full JSON content in a formatted way
+        return json.dumps(workout_data, indent=2, ensure_ascii=False)
+
+    except Exception as e:
+        return f"Error reading workout file '{filename}': {str(e)}"
+
+
+@mcp.tool()
 async def add_or_update_event(
     workout_type: str,
     name: str,

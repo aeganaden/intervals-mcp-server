@@ -100,3 +100,29 @@ class TestTriathlonWorkoutFiles:
         assert "Description:" in result
         assert "minutes" in result
         assert "📋 **" in result  # File icons
+
+    @pytest.mark.asyncio
+    async def test_get_specific_workout_file_content(self):
+        """Test getting specific workout file content."""
+        from intervals_mcp_server.server import get_triathlon_workout_file_content
+        
+        # Test valid file
+        result = await get_triathlon_workout_file_content("Swim", "Meters", "SRe1_Recovery_.json")
+        assert result.startswith("{")  # Should be valid JSON
+        assert "Recovery" in result or "recovery" in result
+        
+        # Test invalid filename
+        result = await get_triathlon_workout_file_content("Swim", "Meters", "NonExistent.json")
+        assert "Error: Workout file 'NonExistent.json' not found" in result
+        
+        # Test invalid category
+        result = await get_triathlon_workout_file_content("Invalid", "Meters", "SRe1_Recovery_.json")
+        assert "Error: Invalid category 'Invalid'" in result
+        
+        # Test invalid metric
+        result = await get_triathlon_workout_file_content("Swim", "Invalid", "SRe1_Recovery_.json")
+        assert "Error: Invalid metric 'Invalid'" in result
+        
+        # Test empty filename
+        result = await get_triathlon_workout_file_content("Swim", "Meters", "")
+        assert "Error: filename parameter is required" in result

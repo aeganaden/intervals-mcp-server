@@ -1,14 +1,27 @@
-# Triathlon Workout Files Endpoint
+# Triathlon Workout Files Tools
 
-The `get_triathlon_workout_files` endpoint provides access to the local collection of triathlon workout JSON files.
+Two endpoints provide access to the local collection of triathlon workout JSON files:
 
-## Usage
+1. **`get_triathlon_workout_files`** - Browse and search workouts
+2. **`get_triathlon_workout_file_content`** - Get full workout data
+
+## Tool 1: Browse and Search Workouts
 
 ```python
 await get_triathlon_workout_files(
     category="Bike",         # Required: "Bike", "Run", or "Swim"
     sub_category="Aerobic",  # Optional: filter by workout type
     metric="HR"              # Optional: "HR", "Power", "Pace", or "Meters" (default: "HR")
+)
+```
+
+## Tool 2: Get Full Workout Content
+
+```python
+await get_triathlon_workout_file_content(
+    category="Swim",                    # Required: "Bike", "Run", or "Swim"
+    metric="Meters",                    # Required: "HR", "Power", "Pace", or "Meters"
+    filename="SRe1_Recovery_.json"      # Required: exact filename
 )
 ```
 
@@ -39,6 +52,7 @@ await get_triathlon_workout_files(
 
 ## Examples
 
+### Browsing Workouts
 ```python
 # Get all bike workouts with heart rate
 result = await get_triathlon_workout_files(category="Bike", metric="HR")
@@ -54,16 +68,36 @@ result = await get_triathlon_workout_files(
 result = await get_triathlon_workout_files(category="Run", metric="Pace")
 ```
 
-## Response Format
+### Getting Full Workout Data
+```python
+# Get complete JSON content of a swim recovery workout
+content = await get_triathlon_workout_file_content("Swim", "Meters", "SRe1_Recovery_.json")
 
-The endpoint returns a formatted string containing:
+# Get bike aerobic interval workout
+content = await get_triathlon_workout_file_content("Bike", "HR", "CAe11_Aerobic_Intervals_.json")
+
+# Get running long run workout
+content = await get_triathlon_workout_file_content("Run", "Pace", "RL1_Long_Run_.json")
+```
+
+## Response Formats
+
+### `get_triathlon_workout_files` Response
+Returns a formatted string containing:
 - Number of files found
 - For each workout file:
   - Filename
   - Duration in minutes
   - Target metric (HR/POWER/PACE/etc.)
   - Description excerpt
-  - Full workout data (JSON structure)
+
+### `get_triathlon_workout_file_content` Response
+Returns the complete JSON workout data as a formatted string, including:
+- Full workout description
+- Duration and distance
+- Sport settings
+- Training zones and targets
+- Complete workout structure
 
 ## Error Handling
 
