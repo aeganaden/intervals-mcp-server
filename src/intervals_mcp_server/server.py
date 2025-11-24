@@ -111,8 +111,8 @@ def validate_date(date_str: str) -> str:
     try:
         datetime.strptime(date_str, "%Y-%m-%d")
         return date_str
-    except ValueError:
-        raise ValueError("Invalid date format. Please use YYYY-MM-DD.")
+    except ValueError as e:
+        raise ValueError("Invalid date format. Please use YYYY-MM-DD.") from e
 
 
 def _get_error_message(error_code: int, error_text: str) -> str:
@@ -672,7 +672,155 @@ async def delete_events_by_date_range(
         )
         if isinstance(result, dict) and "error" in result:
             failed_events.append(event.get('id'))
-    return f"Deleted {len(events) - len(failed_events)} events. Failed to delete {len(failed_events)} events: {failed_events}" 
+    return f"Deleted {len(events) - len(failed_events)} events. Failed to delete {len(failed_events)} events: {failed_events}"
+
+
+@mcp.tool()
+async def get_triathlon_workout_files(
+    category: str,
+    sub_category: str | None = None,
+    metric: str = "HR",
+) -> str:
+    """Get triathlon workout JSON files from the local workout files collection.
+
+    Args:
+        category: The workout category (e.g., "Bike", "Run", "Swim")
+        sub_category: Optional sub-category filter (e.g., "Aerobic", "Anaerobic", "Foundation", "Recovery", etc.)
+        metric: The workout metric type - "HR", "Power", "Pace", or "Meters" (defaults to "HR")
+    """
+    import os
+
+    # Validate metric
+    valid_metrics = ["HR", "Power", "Pace", "Meters"]
+    if metric not in valid_metrics:
+        return f"Error: Invalid metric '{metric}'. Valid options are: {', '.join(valid_metrics)}"
+
+    # Validate category
+    valid_categories = ["Bike", "Run", "Swim"]
+    if category not in valid_categories:
+        return f"Error: Invalid category '{category}'. Valid options are: {', '.join(valid_categories)}"
+
+    # Construct directory path
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    workout_dir = os.path.join(base_dir, "triathlon_workout_files", f"80_20_{category}_{metric}_80_20_Endurance_")
+
+    if not os.path.exists(workout_dir):
+        return f"Error: Workout directory not found for {category} with {metric} metric."
+
+    try:
+        # Get all JSON files in the directory
+        json_files = [f for f in os.listdir(workout_dir) if f.endswith('.json') and not f.startswith('Copyright_')]
+
+        if not json_files:
+            return f"No workout files found for {category} with {metric} metric."
+
+        # Filter by sub-category if provided
+        if sub_category:
+            sub_category_lower = sub_category.lower()
+
+            # Define sub-category mapping based on file naming patterns
+            subcategory_patterns = {
+                "aerobic": ["CAe", "CAP"],  # Aerobic Intervals, Aerobic Progression
+                "anaerobic": ["CAI", "CAn"],  # Anaerobic Intervals
+                "accelerations": ["CA1", "CA2", "CA3", "CA4", "CA5", "CA6", "CA7", "CA8", "CA9"],
+                "cruise": ["CCI"],  # Cruise Intervals
+                "critical_power": ["CCP"],  # Critical Power
+                "depletion": ["CD"],  # Depletion
+                "descending": ["CDI"],  # Descending Intervals
+                "foundation": ["CF"],  # Foundation
+                "fast_finish": ["CFA", "CFF"],  # Fast Finish
+                "force": ["CFo"],  # Force Intervals
+                "mixed": ["CIM", "CMI"],  # Mixed Intervals
+                "sprint": ["CIR"],  # Sprint Intervals
+                "progression": ["CPI"],  # Progression Intervals
+                "power_repetitions": ["CPR"],  # Power Repetitions
+                "recovery": ["CRe"],  # Recovery
+                "speed_play": ["CSP"],  # Speed Play
+                "speed_repetitions": ["CSR"],  # Speed Repetitions
+                "steady_state": ["CSS"],  # Steady State
+                "tempo": ["CT"],  # Tempo
+                "threshold": ["CTR"],  # Threshold
+                "time_trial": ["CTT"],  # Time Trial
+                "variable_intensity": ["CVI"],  # Variable Intensity
+                "vo2max": ["CVO2M"],  # VO2 Max
+                "endurance": ["EC"],  # Endurance
+                "easy": ["EZC"],  # Easy
+                "lactate": ["LIC"],  # Lactate Intervals
+                "over_under": ["OUC"],  # Over Under Intervals
+            }
+
+            # Find matching patterns for the sub-category
+            matching_patterns = []
+            for key, patterns in subcategory_patterns.items():
+                if sub_category_lower in key or key in sub_category_lower:
+                    matching_patterns.extend(patterns)
+
+            # Filter files based on matching patterns
+            filtered_files = []
+            if matching_patterns:
+                for file in json_files:
+                    if any(file.startswith(pattern) for pattern in matching_patterns):
+                        filtered_files.append(file)
+                json_files = filtered_files
+            else:
+                # No patterns matched the sub-category, return empty result
+                return f"No workout files found for {category} with {metric} metric and sub-category '{sub_category}'. Available sub-categories: {', '.join(subcategory_patterns.keys())}"
+
+            if not json_files:
+                return f"No workout files found for {category} with {metric} metric and sub-category '{sub_category}'."
+
+        # Limit results to avoid overwhelming output
+        json_files = sorted(json_files)[:50]  # Limit to first 50 files
+
+        # Load and return the JSON files
+        results = []
+        for filename in json_files:
+            file_path = os.path.join(workout_dir, filename)
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    workout_data = json.load(f)
+
+                # Extract key information for summary
+                description = workout_data.get('description', 'No description available')[:200] + "..."
+                duration = workout_data.get('duration', 0)
+                target = workout_data.get('target', 'Unknown')
+
+                # Format duration in minutes
+                duration_minutes = duration // 60 if duration else 0
+
+                results.append({
+                    "filename": filename,
+                    "description": description,
+                    "duration_minutes": duration_minutes,
+                    "target": target,
+                    "full_data": workout_data
+                })
+
+            except Exception as e:
+                results.append({
+                    "filename": filename,
+                    "error": f"Failed to load file: {str(e)}"
+                })
+
+        # Format response
+        response = f"Found {len(results)} workout files for {category} ({metric} metric)"
+        if sub_category:
+            response += f" in sub-category '{sub_category}'"
+        response += ":\n\n"
+
+        for result in results:
+            if "error" in result:
+                response += f"❌ {result['filename']}: {result['error']}\n\n"
+            else:
+                response += f"📋 **{result['filename']}**\n"
+                response += f"   Duration: {result['duration_minutes']} minutes\n"
+                response += f"   Target: {result['target']}\n"
+                response += f"   Description: {result['description']}\n\n"
+
+        return response
+
+    except Exception as e:
+        return f"Error accessing workout files: {str(e)}"
 
 
 @mcp.tool()
@@ -700,7 +848,7 @@ async def add_or_update_event(
         workout_type: Workout type (e.g. Ride, Run, Swim, Walk, Row)
         moving_time: Total expected moving time of the workout in seconds (optional)
         distance: Total expected distance of the workout in meters (optional)
-    
+
     Example:
         "workout_doc": {
             "description": "High-intensity workout for increasing VO2 max",
@@ -714,7 +862,7 @@ async def add_or_update_event(
                 {"text": ""}, # Add comments or blank lines for readability
             ]
         }
-    
+
     Step properties:
         distance: Distance of step in meters
             {"distance": "5000"}
