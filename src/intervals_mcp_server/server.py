@@ -941,6 +941,228 @@ async def get_triathlon_workout_file_content(
 
 
 @mcp.tool()
+async def parse_triathlon_workout_to_readable_format(
+    category: str,
+    metric: str = "HR",
+    filename: str = "",
+) -> str:
+    """Parse a triathlon workout JSON file into a readable, formatted text suitable for Claude.
+
+    Args:
+        category: The workout category (e.g., "Bike", "Run", "Swim")
+        metric: The workout metric type - "HR", "Power", "Pace", or "Meters" (defaults to "HR")
+        filename: The exact filename of the workout file to parse (e.g., "SRe1_Recovery_.json")
+    """
+    import os
+    import json
+    import math
+
+    # Validate inputs
+    valid_metrics = ["HR", "Power", "Pace", "Meters"]
+    if metric not in valid_metrics:
+        return f"Error: Invalid metric '{metric}'. Valid options are: {', '.join(valid_metrics)}"
+
+    valid_categories = ["Bike", "Run", "Swim"]
+    if category not in valid_categories:
+        return f"Error: Invalid category '{category}'. Valid options are: {', '.join(valid_categories)}"
+
+    if not filename:
+        return "Error: filename parameter is required"
+
+    if not filename.endswith('.json'):
+        filename += '.json'
+
+    # Get the workout data
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    workout_dir = os.path.join(base_dir, "triathlon_workout_files", f"80_20_{category}_{metric}_80_20_Endurance_")
+    file_path = os.path.join(workout_dir, filename)
+
+    if not os.path.exists(file_path):
+        return f"Error: Workout file '{filename}' not found in {category} ({metric}) directory."
+
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            workout_data = json.load(f)
+
+        # Helper functions
+        def format_duration(seconds):
+            """Convert seconds to readable format (m/s/h)"""
+            if seconds < 60:
+                return f"{seconds}s"
+            elif seconds < 3600:
+                minutes = seconds // 60
+                remaining_seconds = seconds % 60
+                if remaining_seconds == 0:
+                    return f"{minutes}m"
+                else:
+                    return f"{minutes}m{remaining_seconds}s"
+            else:
+                hours = seconds // 3600
+                minutes = (seconds % 3600) // 60
+                if minutes == 0:
+                    return f"{hours}h"
+                else:
+                    return f"{hours}h{minutes}m"
+
+        def format_total_duration(seconds):
+            """Format total duration in HH:MM format"""
+            hours = seconds // 3600
+            minutes = (seconds % 3600) // 60
+            if hours == 0:
+                return f"{minutes}m"
+            else:
+                return f"{hours:02d}:{minutes:02d}"
+
+        def format_power_zone(power_data):
+            """Format power zone as % FTP"""
+            if not power_data:
+                return ""
+            start = power_data.get('start', 0)
+            end = power_data.get('end', 0)
+            if start == end:
+                return f"{start}% FTP"
+            else:
+                return f"{start}-{end}% FTP"
+
+        def format_hr_zone(hr_data):
+            """Format HR zone as % LTHR"""
+            if not hr_data:
+                return ""
+            start = hr_data.get('start', 0)
+            end = hr_data.get('end', 0)
+            if start == end:
+                return f"{start}% LTHR"
+            else:
+                return f"{start}-{end}% LTHR"
+
+        def format_pace_zone(pace_data):
+            """Format pace zone as % threshold pace"""
+            if not pace_data:
+                return ""
+            start = pace_data.get('start', 0)
+            end = pace_data.get('end', 0)
+            if start == end:
+                return f"{start}% pace"
+            else:
+                return f"{start}-{end}% pace"
+
+        def get_workout_type():
+            """Determine workout type from category"""
+            type_mapping = {
+                "Bike": "Ride",
+                "Run": "Run", 
+                "Swim": "Swim"
+            }
+            return type_mapping.get(category, category)
+
+        def format_distance(distance):
+            """Format distance for swim workouts"""
+            if distance and distance > 0:
+                return f"{int(distance)} meter"
+            return ""
+
+        def parse_step(step, is_swim=False):
+            """Parse a single step/interval"""
+            text = step.get('text', 'Active')
+            duration = step.get('duration', 0)
+            distance = step.get('distance', 0)
+            
+            # Format instruction text
+            instruction = text if text != 'Active' else 'Maintain effort'
+            
+            # Format duration or distance
+            if is_swim and distance:
+                duration_str = format_distance(distance)
+            else:
+                duration_str = format_duration(duration)
+            
+            # Format intensity zones
+            intensity = ""
+            if 'power' in step:
+                intensity = format_power_zone(step['power'])
+            elif 'hr' in step:
+                intensity = format_hr_zone(step['hr'])
+            elif 'pace' in step:
+                intensity = format_pace_zone(step['pace'])
+            
+            return f'- "{instruction}" {duration_str} {intensity}'.strip()
+
+        # Start building the formatted output
+        result = []
+        
+        # Extract workout name from filename
+        workout_name = filename.replace('.json', '').replace('_', ' ')
+        result.append(f"Workout Name: {workout_name}")
+        result.append("")
+        
+        # Workout type
+        result.append(f"Workout Type: {get_workout_type()}")
+        result.append("")
+        
+        # Total duration
+        total_duration = workout_data.get('duration', 0)
+        result.append(f"Total Duration: {format_total_duration(total_duration)}")
+        result.append("")
+        
+        # Description
+        description = workout_data.get('description', 'No description available')
+        result.append("Description:")
+        result.append("```")
+        result.append(description.strip())
+        result.append("```")
+        result.append("")
+        
+        # Parse steps/intervals
+        steps = workout_data.get('steps', [])
+        is_swim = (category == "Swim")
+        
+        if steps:
+            result.append("```")
+            
+            for i, step in enumerate(steps):
+                reps = step.get('reps', 0)
+                
+                if reps > 1:
+                    # Repeated intervals
+                    result.append(f"Repeat {reps}x")
+                    sub_steps = step.get('steps', [])
+                    if sub_steps:
+                        for sub_step in sub_steps:
+                            interval_line = parse_step(sub_step, is_swim)
+                            result.append(interval_line)
+                    else:
+                        # Single step with reps
+                        interval_line = parse_step(step, is_swim)
+                        result.append(interval_line)
+                    result.append("")
+                else:
+                    # Single interval
+                    text = step.get('text', 'Active')
+                    interval_name = text if text != 'Active' else f"Interval {i+1}"
+                    
+                    # Check if this step has sub-steps
+                    sub_steps = step.get('steps', [])
+                    if sub_steps:
+                        result.append(interval_name)
+                        for sub_step in sub_steps:
+                            interval_line = parse_step(sub_step, is_swim)
+                            result.append(interval_line)
+                        result.append("")
+                    else:
+                        result.append(interval_name)
+                        interval_line = parse_step(step, is_swim)
+                        result.append(interval_line)
+                        result.append("")
+            
+            result.append("```")
+        
+        return '\n'.join(result)
+
+    except Exception as e:
+        return f"Error parsing workout file '{filename}': {str(e)}"
+
+
+@mcp.tool()
 async def add_or_update_event(
     workout_type: str,
     name: str,

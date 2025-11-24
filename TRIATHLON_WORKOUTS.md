@@ -1,9 +1,10 @@
 # Triathlon Workout Files Tools
 
-Two endpoints provide access to the local collection of triathlon workout JSON files:
+Three endpoints provide access to the local collection of triathlon workout JSON files:
 
 1. **`get_triathlon_workout_files`** - Browse and search workouts
 2. **`get_triathlon_workout_file_content`** - Get full workout data
+3. **`parse_triathlon_workout_to_readable_format`** - Parse workouts into readable format
 
 ## Tool 1: Browse and Search Workouts
 
@@ -22,6 +23,16 @@ await get_triathlon_workout_file_content(
     category="Swim",                    # Required: "Bike", "Run", or "Swim"
     metric="Meters",                    # Required: "HR", "Power", "Pace", or "Meters"
     filename="SRe1_Recovery_.json"      # Required: exact filename
+)
+```
+
+## Tool 3: Parse Workout to Readable Format
+
+```python
+await parse_triathlon_workout_to_readable_format(
+    category="Bike",                    # Required: "Bike", "Run", or "Swim"
+    metric="Power",                     # Required: "HR", "Power", "Pace", or "Meters"
+    filename="CA1_80_20_Accelerations_Ride_.json"  # Required: exact filename
 )
 ```
 
@@ -80,6 +91,18 @@ content = await get_triathlon_workout_file_content("Bike", "HR", "CAe11_Aerobic_
 content = await get_triathlon_workout_file_content("Run", "Pace", "RL1_Long_Run_.json")
 ```
 
+### Getting Readable Workout Format
+```python
+# Parse swim workout into readable format with code blocks
+readable = await parse_triathlon_workout_to_readable_format("Swim", "Meters", "SER1_Exit_and_Recovery_.json")
+
+# Parse bike power workout with FTP zones
+readable = await parse_triathlon_workout_to_readable_format("Bike", "Power", "CA1_80_20_Accelerations_Ride_.json")
+
+# Parse running workout with LTHR zones
+readable = await parse_triathlon_workout_to_readable_format("Run", "HR", "ER_1_Endurance_Run_.json")
+```
+
 ## Response Formats
 
 ### `get_triathlon_workout_files` Response
@@ -98,6 +121,19 @@ Returns the complete JSON workout data as a formatted string, including:
 - Sport settings
 - Training zones and targets
 - Complete workout structure
+
+### `parse_triathlon_workout_to_readable_format` Response
+Returns a human-readable workout format with:
+- Workout name and type
+- Total duration (HH:MM format)
+- Description in code blocks
+- Intervals formatted with:
+  - Interval names
+  - Instructions in quotes
+  - Duration (m/s/h format)
+  - Intensity zones (% FTP, % LTHR, % pace, or meters for swim)
+  - Proper formatting for repeated intervals
+- All content wrapped in triple backticks for Claude readability
 
 ## Error Handling
 

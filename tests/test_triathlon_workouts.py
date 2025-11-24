@@ -126,3 +126,33 @@ class TestTriathlonWorkoutFiles:
         # Test empty filename
         result = await get_triathlon_workout_file_content("Swim", "Meters", "")
         assert "Error: filename parameter is required" in result
+
+    @pytest.mark.asyncio
+    async def test_parse_workout_to_readable_format(self):
+        """Test parsing workout files to readable format."""
+        from intervals_mcp_server.server import parse_triathlon_workout_to_readable_format
+        
+        # Test swim workout
+        result = await parse_triathlon_workout_to_readable_format("Swim", "Meters", "SER1_Exit_and_Recovery_.json")
+        assert "Workout Name:" in result
+        assert "Workout Type: Swim" in result
+        assert "Total Duration:" in result
+        assert "Description:" in result
+        assert "```" in result  # Should have code blocks
+        
+        # Test bike power workout
+        result = await parse_triathlon_workout_to_readable_format("Bike", "Power", "CA1_80_20_Accelerations_Ride_.json")
+        assert "Workout Type: Ride" in result
+        assert "FTP" in result  # Should show power zones
+        
+        # Test run HR workout
+        result = await parse_triathlon_workout_to_readable_format("Run", "HR", "ER_1_Endurance_Run_.json")
+        assert "Workout Type: Run" in result
+        assert "LTHR" in result  # Should show HR zones
+        
+        # Test error cases
+        result = await parse_triathlon_workout_to_readable_format("Invalid", "HR", "test.json")
+        assert "Error: Invalid category" in result
+        
+        result = await parse_triathlon_workout_to_readable_format("Swim", "Meters", "NonExistent.json")
+        assert "Error: Workout file" in result
