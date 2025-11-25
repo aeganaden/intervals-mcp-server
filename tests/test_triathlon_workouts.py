@@ -156,3 +156,23 @@ class TestTriathlonWorkoutFiles:
         
         result = await parse_triathlon_workout_to_readable_format("Swim", "Meters", "NonExistent.json")
         assert "Error: Workout file" in result
+
+    @pytest.mark.asyncio
+    async def test_limit_parameter(self):
+        """Test the limit parameter functionality."""
+        # Test default limit (should work)
+        result = await get_triathlon_workout_files("Bike", metric="HR")
+        assert "Found" in result
+        
+        # Test custom limit (small number)
+        result = await get_triathlon_workout_files("Bike", metric="HR", limit=3)
+        assert "Found" in result
+        # Should have at most 3 files
+        file_count = result.count("📋 **")
+        assert file_count <= 3
+        
+        # Test limit of 1
+        result = await get_triathlon_workout_files("Bike", metric="HR", limit=1)
+        assert "Found" in result
+        file_count = result.count("📋 **")
+        assert file_count <= 1

@@ -680,6 +680,7 @@ async def get_triathlon_workout_files(
     category: str,
     sub_category: str | None = None,
     metric: str = "HR",
+    limit: int = 50,
 ) -> str:
     """Get triathlon workout JSON files from the local workout files collection.
 
@@ -687,6 +688,7 @@ async def get_triathlon_workout_files(
         category: The workout category (e.g., "Bike", "Run", "Swim")
         sub_category: Optional sub-category filter (e.g., "Aerobic", "Anaerobic", "Foundation", "Recovery", etc.)
         metric: The workout metric type - "HR", "Power", "Pace", or "Meters" (defaults to "HR")
+        limit: Maximum number of files to return (defaults to 50)
     """
     import os
 
@@ -832,7 +834,7 @@ async def get_triathlon_workout_files(
                 return f"No workout files found for {category} with {metric} metric and sub-category '{sub_category}'."
 
         # Limit results to avoid overwhelming output
-        json_files = sorted(json_files)[:50]  # Limit to first 50 files
+        json_files = sorted(json_files)[:limit]  # Limit to specified number of files
 
         # Load and return the JSON files
         results = []

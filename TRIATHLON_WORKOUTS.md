@@ -12,7 +12,8 @@ Three endpoints provide access to the local collection of triathlon workout JSON
 await get_triathlon_workout_files(
     category="Bike",         # Required: "Bike", "Run", or "Swim"
     sub_category="Aerobic",  # Optional: filter by workout type
-    metric="HR"              # Optional: "HR", "Power", "Pace", or "Meters" (default: "HR")
+    metric="HR",             # Optional: "HR", "Power", "Pace", or "Meters" (default: "HR")
+    limit=50                 # Optional: max number of files to return (default: 50)
 )
 ```
 
@@ -49,6 +50,8 @@ await parse_triathlon_workout_to_readable_format(
   - `"Pace"` - Pace based workouts (running)
   - `"Meters"` - Distance based workouts (swimming)
 
+- **limit** (optional, default: 50): Maximum number of workout files to return
+
 - **sub_category** (optional): Filter by workout type
   - `"aerobic"` - Aerobic intervals and progression
   - `"anaerobic"` - Anaerobic intervals
@@ -77,6 +80,9 @@ result = await get_triathlon_workout_files(
 
 # Get running pace-based workouts
 result = await get_triathlon_workout_files(category="Run", metric="Pace")
+
+# Get only first 10 bike workouts
+result = await get_triathlon_workout_files(category="Bike", metric="HR", limit=10)
 ```
 
 ### Getting Full Workout Data
